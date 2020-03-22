@@ -206,16 +206,16 @@ class EQTL():
 
 
 p = EQTL()
-d = p.make_promoter_interacted_bin("promoter/final_promoter_overlap.csv")
-bins = []
-print("finish")
-for i in d :
-    for j in d[i] :
-        # if j not in bins :
-        bins.append(j)
-# print(d)
-bins = set(bins)
-print(len(bins))
-# p.interaction_EQTL_annotation("promoter/promoters_with_chr2.csv", "Breast_Mammary_Tissue.signifpairs_GTEX.txt",
-#                               "bin_data/new_unique_bin.csv", "promoter/final_promoter_overlap.csv")
+# d = p.make_promoter_interacted_bin("promoter/final_promoter_overlap.csv")
+# bins = []
+# print("finish")
+# for i in d :
+#     for j in d[i] :
+#         # if j not in bins :
+#         bins.append(j)
+# # print(d)
+# bins = set(bins)
+# print(len(bins))
+p.interaction_EQTL_annotation("promoter/promoters_with_chr2.csv", "Breast_Mammary_Tissue.signifpairs_GTEX.txt",
+                              "bin_data/new_unique_bin.csv", "promoter/final_promoter_overlap.csv")
 # p.normal_dist_chart("EQTL",p.result)

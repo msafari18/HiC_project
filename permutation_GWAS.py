@@ -71,9 +71,15 @@ class Permutation_for_GWAS():
         return new_GWAS_data
 
     def normal_dist_chart(self, name, len_of_interactions):
-        real_val = 0.76
+
+        real_val = {
+            "autism_GWAS" : 0.1679,
+            "breast_cancer_GWAS" : 0.55,
+            "Schizophrenia_GWAS" : 0.73,
+            "not_Schizophrenia_GWAS" : 1.31
+        }
+
         data = [i * 100 for i in len_of_interactions]
-        # print("all results : ", data)
         length_of_data = len(data)
         # Fit a normal distribution to the data:
         mean, std = norm.fit(data)
@@ -86,26 +92,24 @@ class Permutation_for_GWAS():
         plt.plot(x, p, 'k', linewidth=2)
         title = name + "\n Fit results: mu = %.4f,  std = %.4f" % (mean, std)
         plt.title(title)
-        plt.axvline(x=real_val, ymax=250, color='r', alpha=0.5)
+        plt.axvline(x=real_val[name], ymax=250, color='r', alpha=0.5)
         plt.savefig(name + ".png")
-        onesample_results = scipy.stats.ttest_1samp(data, real_val)
+        onesample_results = scipy.stats.ttest_1samp(data, real_val[name])
         print(name + "p-value : ", onesample_results[1])
         better = 0
         for i in data:
-            if i > real_val:
+            if i > real_val[name]:
                 better += 1
 
         print("better results : ", better)
         plt.show()
 
     def run_permutation_test(self,data) :
-        # p2 = Hic_proj_GWAS()
-        # p2.call_seprate_related_promoters_bins()
-        print("start")
+        # print("start")
         self.p2.element_GWAS_dict = {}
-        self.p2.GWAS_annotation("", data,"bin_data/new_unique_bin.csv", True)
-        res = self.p2.map_GWAS_to_bins()
-        print("finish")
+        self.p2.GWAS_annotation("", data,"bin_data/CNON_new_unique_bin.csv", True)
+        res = self.p2.map_GWAS_to_bins("","bin_data/CNON_new_unique_bin.csv")
+        # print("finish")
         return res
 
 
@@ -113,30 +117,31 @@ class Permutation_for_GWAS():
 
 
 if __name__ == '__main__':
-    file_name = "Schizophrenia_GWAS"
+    file_name = "autism_GWAS"
+    # file_name = "breast_cancer_GWAS"
+    # file_name = "Schizophrenia_GWAS"
+    # file_name = "not_Schizophrenia_GWAS"
     p1 = Permutation_for_GWAS()
     p1.p2 = Hic_proj_GWAS()
-    iteration = 2
+    iteration = 5
     t1 = datetime.datetime.now()
-    p1.p2.call_seprate_related_promoters_bins()
+    p1.p2.call_seprate_related_promoters_bins("CNON/Brain_CNON_SEP044_5k_0.001_2.01.20.txt","promoter/CNON_overlap_promoter_1.csv")
     datasets = []
     all_res = []
     counter = 0
-    for i in range(1) :
+    for i in range(2) :
         counter +=1
         m = [False for i in range(iteration)]
         n = [file_name for i in range(iteration)]
 
         f = np.vectorize(p1.make_random_GWAS)
         datasets = f(n,m)
-
-        counter = [i for i in range(iteration)]
         with Pool(iteration) as p:
             results = p.map(p1.run_permutation_test ,datasets)
 
         for j in results :
             all_res.append(j)
-        # print("finish : ", counter)
+        print("finish : ", counter)
 
     print(len(all_res))
     print(all_res)

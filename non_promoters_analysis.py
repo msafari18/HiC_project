@@ -14,8 +14,11 @@ class non_promoter_analysis():
 
         data = pd.read_csv("FANTOM_CAT.lv3_robust.info_table.gene.tsv", header=None, sep="\t")
         data.columns = data.loc[0]
+        # lnc_data = data.query(
+        #     'geneClass == "lncRNA_divergent" or geneClass == "lncRNA_antisense" or geneClass == "lncRNA_intergenic"or geneClass == "lncRNA_sense_intronic"')
         lnc_data = data.query(
-            'geneClass == "lncRNA_divergent" or geneClass == "lncRNA_antisense" or geneClass == "lncRNA_intergenic"or geneClass == "lncRNA_sense_intronic"')
+            'DHS_type == "DHS_enhancer" ')
+
         lnc_data = lnc_data.reset_index(drop=True)
         new_lncRNA = []
         counter = 0
@@ -29,10 +32,12 @@ class non_promoter_analysis():
             end = end.replace(",", "")
             end = end.replace("+", "")
             type = lnc_data.at[i, "geneClass"]
-            id = "lncRNA_" + str(counter)
+            # id = "lncRNA_" + str(counter)
+            id = "DHS_enhancer" + str(counter)
             new_lncRNA.append({"id": id, "start": start, "end": end, "chr": chr, "type": type})
             counter += 1
-        csv_file = "elements/lncRNA.csv"
+        # csv_file = "elements/lncRNA.csv"
+        csv_file = "elements/DHS_enhancer.csv"
         csv_columns = ['id', 'start', 'end', 'chr', 'type']
 
         try:
@@ -84,24 +89,41 @@ class non_promoter_analysis():
         bin_data.columns = list(bin_data.loc[0][:])
         bin_data_id = bin_data.loc[:]["id"]
 
+        all_overlaped = []
         for i in range(1, len(promoter_overlap_data)):
-            id = promoter_overlap_data.at[i, "promoter_ID"]
-            interacted = promoter_overlap_data.at[i, "related_interactions_id"]
-            promoter_interacted_bin[id] = ast.literal_eval(interacted)
+            overlaped_bins = promoter_overlap_data.at[i,"overlaped_bin_F_ID"]
+            bins = ast.literal_eval(overlaped_bins)
+            for j in bins :
+                all_overlaped.append(j)
 
-        for i in promoter_interacted_bin:
-            for j in promoter_interacted_bin[i]:
-                promoter_bins.append(j)
-        promoter_bins = set(promoter_bins)
+        all_overlaped = [str(i) for i in all_overlaped]
+        all_overlaped = set(all_overlaped)
         all = set(bin_data_id)
         all = set([str(i) for i in all])
-        promoter_bins = set([str(i) for i in promoter_bins])
+        print(len(all))
+        print(len(all_overlaped))
+        non_promoter_bins = all - all_overlaped
+        print("here .. ")
+        print(len(non_promoter_bins))
 
-        for i in all:
-            if i not in promoter_bins:
-                non_promoter_bins.append(i)
-        non_promoter_bins = set(non_promoter_bins)
-        print("here  : ")
+        # for i in range(1, len(promoter_overlap_data)):
+        #     id = promoter_overlap_data.at[i, "promoter_ID"]
+        #     interacted = promoter_overlap_data.at[i, "related_interactions_id"]
+        #     promoter_interacted_bin[id] = ast.literal_eval(interacted)
+        #
+        # for i in promoter_interacted_bin:
+        #     for j in promoter_interacted_bin[i]:
+        #         promoter_bins.append(j)
+        # promoter_bins = set(promoter_bins)
+        # all = set(bin_data_id)
+        # all = set([str(i) for i in all])
+        # promoter_bins = set([str(i) for i in promoter_bins])
+        #
+        # for i in all:
+        #     if i not in promoter_bins:
+        #         non_promoter_bins.append(i)
+        # non_promoter_bins = set(non_promoter_bins)
+        # print("here  : ")
         non_promoter_bins_dict = []
         for i in range(len(bin_data)):
             if i % 1000 == 0:
@@ -112,10 +134,10 @@ class non_promoter_analysis():
             chr = str(bin_data.at[i, "chr"])
             if id in non_promoter_bins:
                 non_promoter_bins_dict.append({"id": id, "start": start, "end": end, "chr": chr})
-
+        #
         print(len(non_promoter_bins_dict))
 
-        csv_file = "bin_data/non_promoter_bins.csv"
+        csv_file = "bin_data/new_non_promoter_bins.csv"
         csv_columns = ['id', 'start', 'end', 'chr']
 
         try:
@@ -167,9 +189,15 @@ class non_promoter_analysis():
         v(lnc_RNA_promoter.loc[:]["start"], lnc_RNA_promoter.loc[:]["end"],lnc_RNA_promoter.loc[:]["id"],
           lnc_RNA_promoter.loc[:]["chr"])
 
+        x = len(set(self.overlaped)) / 270380
+        y = (270380 - len(set(self.overlaped))) / 270380
         print(len(set(self.overlaped)))
-        print(len(set(self.overlaped)) / 125726)
-        print((125726 - len(set(self.overlaped))) / 125726)
+        print(len(set(self.overlaped)) / 270380)
+        print((270380 - len(set(self.overlaped))) / 270380)
+        print(lnc_file_name)
+        name = lnc_file_name.split("/")[1]
+        name = name.split(".")[0]
+        p.draw_bar_chart(x, y, name, 1)
 
     def check_lnc_overlap(self, start, end, id, chr):
         self.m += 1
@@ -221,6 +249,6 @@ p = non_promoter_analysis()
 # p.read_data()
 # p.find_lncRNA_promoter()
 # p.non_promoter_regions("promoter/final_promoter_overlap.csv", "bin_data/new_unique_bin.csv")
-# p.overlap_with_lncRNA("promoter/lncRNA_promoter.csv", "bin_data/non_promoter_bins.csv")
-p.draw_bar_chart(0.06,0.93,"protein coding gene",1)
+p.overlap_with_lncRNA("elements/lncRNA_file.csv", "bin_data/new_non_promoter_bins.csv")
+# p.draw_bar_chart(0.06,0.93,"protein coding gene",1)
 # p.protein_coding_gene("elements/gene_file.csv")

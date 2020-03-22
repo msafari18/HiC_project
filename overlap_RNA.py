@@ -5,12 +5,29 @@ import matplotlib.pyplot as plt;
 import numpy as np
 import matplotlib.pyplot as plt
 import ast
-from scipy.stats import chi2_contingency,stats
+from scipy.stats import chi2_contingency, stats
 
-UNIQUE_BINS_NUMBER = 270352
+# breast cancer
+# UNIQUE_BINS_NUMBER = 270352
+# CNON
+# UNIQUE_BINS_NUMBER = 223984
+# Neun
+# UNIQUE_BINS_NUMBER = 47795
+#Neun-
+# UNIQUE_BINS_NUMBER = 32385
+#SEP
+UNIQUE_BINS_NUMBER = 174050
+
 # PROMOTERS_INTERACTIONS_REGIONS = 144639
-PROMOTERS_INTERACTIONS_REGIONS = 150482
-
+# PROMOTERS_INTERACTIONS_REGIONS = 150482
+#CNON
+# PROMOTERS_INTERACTIONS_REGIONS = 123877
+#NEUN
+# PROMOTERS_INTERACTIONS_REGIONS = 21904
+#NEUN-
+# PROMOTERS_INTERACTIONS_REGIONS = 10638
+#SEP
+PROMOTERS_INTERACTIONS_REGIONS = 93647
 NON_PROMOTER_INTERACTIONS_REGIONS = UNIQUE_BINS_NUMBER - PROMOTERS_INTERACTIONS_REGIONS
 ALL_INTERACTIONS = 563870
 ALL_PROMOTER_INTERACTIONS = 286560
@@ -31,6 +48,7 @@ class Hic_proj_overlap():
         self.temp_bin = []
         self.repeat_bin = set()
 
+    #################################################################### DATA PREPROCESSING
     # it use to splite huge data in seprated data
     # record_per_file by default is 500000
     def split_big_data(self, csv_file_name="interaction_overlap_repeat_file.csv", record_per_file=500000):
@@ -99,391 +117,6 @@ class Hic_proj_overlap():
         # print(len(result))
         result = result.reset_index(drop=True)
         result.to_csv("repeat/LTR_repeatMaskers.csv", index=False)
-
-    def seprate_by_chr(self, data):
-
-        for chr in range(1, 24):
-            s = str(chr)
-            temp = data.query("chr == @chr or chr == @s")
-            temp = temp.reset_index(drop=True)
-            temp = temp.sort_values(by=['bin_start'])
-            self.bin_seprated.append(temp)
-
-    # find all RNAs overlaps
-    def find_RNAs_overlp(self, RNA_file_name, csv_file_name="bin_data/new_unique_bin.csv", is_RNA=True, is_exon=False,
-                         is_repeat=False, is_enhancer=False):
-        # preprocessing ovelap data
-        bin_data = pd.read_csv(csv_file_name, header=None)
-        bin_data.columns = ["bin_id","bin_start","bin_end","chr"]
-        bin_data = bin_data.loc[1:].astype('int64')
-        bin_data = bin_data.sort_values(by=['bin_start'])
-        self.seprate_by_chr(bin_data)
-
-        if is_enhancer :
-            path = "enhancer/"
-        if is_RNA or is_exon :
-            path = "elements/"
-        data = pd.read_csv(path + RNA_file_name + "_file.csv", header=None)
-        data.columns = list(data.loc[0])
-
-        data = data.loc[1:]
-        data = data.astype({'start': 'int64'})
-        data = data.astype({'end': 'int64'})
-        data = data.sort_values(by=['start'])
-        print("name of resded data : ", RNA_file_name)
-        print("lenth of reading data : ", len(data))
-        print("finish reading ! ")
-        print("start processing !")
-        self.interaction = []
-        self.duplicate = []
-        self.bin_id_interacted_with_elements = {}
-        self.temp_bin = []
-        t1 = datetime.datetime.now()
-        v = np.vectorize(self.check_RNAs_overlap)
-        v(data.loc[:]["start"], data.loc[:]["end"], data.loc[:]["id"],
-          data.loc[:]["chr"], "", is_RNA, is_exon, is_repeat)
-
-        #---------------------------------------------------------------------------------
-        interaction_dict = self.make_bin_dictionary_interactions()
-        print("here to see what happen to remove wrong interactions : ")
-        # for i in interaction_dict :
-        #     print(type(i))
-        # print(len(interaction_dict))
-        # print(len(set(interaction_dict)))
-        # print(len(self.bin_id_interacted_with_elements))
-        # removed_bin = []
-        # for j in self.bin_id_interacted_with_elements :
-        #     for i in interaction_dict[j] :
-        #         if int(i) in self.bin_id_interacted_with_elements :
-        #             removed_bin.append(j)
-        #             removed_bin.append(int(i))
-        # removed_bin = list(set(removed_bin))
-        # print("should removed",len(removed_bin))
-        # print(removed_bin)
-        # print(len(self.bin_id_interacted_with_elements))
-        # for i in removed_bin :
-        #     self.bin_id_interacted_with_elements.pop(i)
-        # print(len(self.bin_id_interacted_with_elements))
-        # x = set(self.bin_id_interacted_with_elements)- set(removed_bin)
-        # print(len(x))
-        # self.bin_id_interacted_with_elements = list(x)
-
-
-        print("finish finding overlaps ! ")
-        csv_file_name = "interaction_overlap/interaction_overlap_" + RNA_file_name + "_file.csv"
-        csv_col = ['element_id', 'bin_id', 'bin_start', 'bin_end', 'element_start', 'element_end', 'chr',
-                   'overlap_bp']
-        csv_file_name2 = "interaction_overlap/bin_id_interaction_overlap_" + RNA_file_name + "_file.csv"
-
-        print("number of bin_id : ", len(self.bin_id_interacted_with_elements))
-
-        if is_repeat:
-            # for i in range(1, 12):
-            self.interaction = []
-            path = "repeat/"
-            repeat_data = pd.read_csv(path + RNA_file_name + ".csv", header=None)
-            # repeat_file_name = "repeatMasker.csv" + str(i) + ".csv"
-            # repeat_data = pd.read_csv(repeat_file_name, header=None, error_bad_lines=False, engine="c")
-            repeat_data.columns = ["id", "chr", "start_repeat", "end_repeat", "type_of_repeat"]
-            repeat_data = repeat_data.loc[1:]
-            repeat_data = repeat_data.astype({'start_repeat': 'int64'})
-            repeat_data = repeat_data.astype({'end_repeat': 'int64'})
-            repeat_data = repeat_data.sort_values(by=['start_repeat'])
-            print("name of resded data : ", RNA_file_name)
-            print("lenth of reading data : ", len(repeat_data))
-            print("finish reading ! ")
-            print("start processing !")
-            t1 = datetime.datetime.now()
-            v = np.vectorize(self.check_RNAs_overlap)
-
-            v(repeat_data.loc[:]["start_repeat"], repeat_data.loc[:]["end_repeat"], repeat_data.loc[:]["id"],
-              repeat_data.loc[:]["chr"], repeat_data.loc[:]["type_of_repeat"], is_RNA, is_exon, is_repeat)
-
-            csv_file_name = "repeat/interaction_overlap_" + RNA_file_name + ".csv"
-            csv_col = ['bin_id', 'element_id', 'bin_start', 'bin_end', 'element_start', 'element_end', 'chr',
-                       'type_of_repeat', 'overlap_bp']
-            csv_file_name2 = "repeat/bin_id_interaction_overlap_" + RNA_file_name + "_file.csv"
-
-        try:
-            with open(csv_file_name, 'w', newline='') as csv_file:
-                writer = csv.DictWriter(csv_file, fieldnames=csv_col)
-                writer.writeheader()
-                for data in self.interaction:
-                    writer.writerow(data)
-        except IOError:
-            print("I/O error / can not write on csv file")
-        try:
-            with open(csv_file_name2, 'w', newline='') as f:
-                writer = csv.writer(f)
-                for row in self.bin_id_interacted_with_elements.items():
-                    writer.writerow(row)
-        except IOError:
-            print("I/O error / can not write on csv file")
-        t2 = datetime.datetime.now()
-        print("time: ", t2 - t1)
-
-    # check RNA overlap with interactions
-    def check_RNAs_overlap(self, start, end, id, chr, type, is_RNA, is_exon, is_repeat):
-        self.m += 1
-        if self.m % 1000 == 0:
-            print(self.m)
-        if is_repeat:
-            chr = chr.replace("chr", "")
-        if chr == "X" or chr == "Y":
-            chr = 23
-        try:
-            chr = int(chr)
-        except:
-            chr = 24
-        if chr < 24:
-            bin_data = self.bin_seprated[int(chr) - 1]
-            bin_start = bin_data.loc[:]["bin_start"]
-            bin_end = bin_data.loc[:]["bin_end"]
-            bin_id = bin_data.loc[:]["bin_id"]
-            length = end - start - 10
-            start_index = np.searchsorted(bin_end, start - length)
-            end_index = np.searchsorted(bin_start, end)
-            i = start_index
-            if start_index >= 2:
-                i = i - 2
-
-            while i <= end_index:
-                if end_index >= len(bin_end):
-                    break
-
-                if start > bin_start[i] - length and end < bin_end[i] + length:
-                    id_BIN = bin_id[i]
-                    if start < bin_start[i] and end < bin_end[i]:
-                        bp_overlap = end - bin_start[i]
-                    elif start >= bin_start[i] and end <= bin_end[i]:
-                        bp_overlap = end - start
-                    elif start >= bin_start[i] and end > bin_end[i]:
-                        bp_overlap = bin_end[i] - start
-                    elif start < bin_start[i] and end > bin_end[i]:
-                        bp_overlap = 5000  # bin_length
-                    else:
-                        bp_overlap = 0
-
-                    if is_repeat:
-                        if id_BIN not in self.repeat_bin :
-                            self.repeat_bin.add(id_BIN)
-                        # exist_id = {}
-                        # for sub_dict in self.interaction:
-                        #     if sub_dict["element_id"] == id:
-                        #         exist_id = sub_dict
-                        #         break
-                        # if len(exist_id) == 0:
-                        # self.interaction.append(
-                        #     {"element_id": id, "bin_id": [id_BIN], "bin_start": [bin_start[i]],
-                        #      "bin_end": [bin_end[i]],
-                        #      "element_start": start, "element_end": end, "chr": chr, "overlap_bp": [bp_overlap]})
-                        # else:
-                        #     exist_id = exist_id
-                        #     if id_BIN not in exist_id["bin_id"]:
-                        #         exist_id["bin_id"].append(id_BIN)
-                        #         exist_id["bin_start"].append(bin_start[i])
-                        #         exist_id["bin_end"].append(bin_end[i])
-                        #         exist_id["overlap_bp"].append(bp_overlap)
-
-                        # if id_BIN not in self.bin_id_interacted_with_elements:
-                        #     self.bin_id_interacted_with_elements[id_BIN] = [id]
-                        # else:
-                        #     if id not in self.bin_id_interacted_with_elements[id_BIN]:
-                        #         self.bin_id_interacted_with_elements[id_BIN].append(id)
-
-                                # self.interaction.append(
-                                #     {"bin_id": id_BIN, "repeat_id": id, "bin_start": bin_start[i], "bin_end": bin_end[i],
-                                #      "repeat_start": start, "repeat_end": end, "chr": chr, "type_of_repeat": type,
-                                #      "overlap_bp": bp_overlap})
-                    if is_RNA or is_exon:
-
-                        # exist_id = {}
-                        # for sub_dict in self.interaction:
-                        #     if sub_dict["element_id"] == id:
-                        #         exist_id = sub_dict
-                        #         break
-                        # if len(exist_id) == 0:
-                        #     self.interaction.append(
-                        #         {"element_id": id, "bin_id": [id_BIN], "bin_start": [bin_start[i]],
-                        #          "bin_end": [bin_end[i]],
-                        #          "element_start": start, "element_end": end, "chr": chr, "overlap_bp": [bp_overlap]})
-                        # else:
-                        #     exist_id = exist_id
-                        #     if id_BIN not in exist_id["bin_id"]:
-                        #         exist_id["bin_id"].append(id_BIN)
-                        #         exist_id["bin_start"].append(bin_start[i])
-                        #         exist_id["bin_end"].append(bin_end[i])
-                        #         exist_id["overlap_bp"].append(bp_overlap)
-                        t = set(self.temp_bin)
-                        # print("here : ",t)
-                        if id_BIN not in t :
-                            self.temp_bin.append(id_BIN)
-                            self.bin_id_interacted_with_elements[id_BIN] = [id]
-                        else:
-                            if id not in self.bin_id_interacted_with_elements[id_BIN]:
-                                self.bin_id_interacted_with_elements[id_BIN].append(id)
-                i += 1
-
-    # find elements which interact by promoter
-    def promoter_element_interaction_annotation(self, file_name,p_file_name, is_RNA=True,
-                                                is_exon=False, is_repeat=False):
-        total_len = []
-        x = []
-        promoter_interaction_dict = self.interacted_id_promoter(p_file_name)
-        if is_repeat:
-            element_data = list(self.repeat_bin)
-            for bin_id in element_data:
-                if bin_id in promoter_interaction_dict:
-                    x.append(bin_id)
-
-            promoter_related = len(set(x))
-            # print(promoter_related)
-            non_promoter_related = len(element_data) - len(set(x))
-            m = promoter_related / PROMOTERS_INTERACTIONS_REGIONS
-            n = non_promoter_related / NON_PROMOTER_INTERACTIONS_REGIONS
-            self.draw_bar_chart(m, n, file_name, 2)
-            print(m, n, "type2")
-            # element_data = pd.read_csv("repeat/bin_id_interaction_overlap_" + file_name + "_file.csv",
-            #                            header=None)
-            # element_data.columns = ['bin_id', 'element_id']
-            # element_data_2 = pd.read_csv(
-            #     "repeat/interaction_overlap_" + file_name + ".csv", header=None)
-        # if is_RNA:
-        #     path = ""
-        element_data = pd.read_csv(
-            "interaction_overlap/bin_id_interaction_overlap_" + file_name + "_file" + ".csv", header=None)
-        # element_data = pd.read_csv(
-        #     "enhancer/bin_id_interaction_overlap_" + file_name + "_file" + ".csv", header=None)
-        element_data.columns = ['bin_id', 'element_id']
-        # element_data_2 = pd.read_csv(
-            # "interaction_overlap/interaction_overlap_" + file_name + "_file" + ".csv", header=None)
-        # element_data_2 = pd.read_csv(
-        #     "enhancer/interaction_overlap_" + file_name + "_file" + ".csv", header=None)
-
-        element_promoter_interactions = {}
-        # print(len(element_data_2))
-        types = []
-        x = []
-        for n in range(0, len(element_data)):
-            bin_id = int(element_data.at[n, "bin_id"])
-            ids = element_data.at[n, "element_id"]
-            ids = ast.literal_eval(ids)
-
-            if bin_id in promoter_interaction_dict:
-                x.append(bin_id)
-                for id in ids:
-                    if id in element_promoter_interactions:
-                        for j in promoter_interaction_dict[bin_id]:
-                            element_promoter_interactions[id].append(j)
-                    else:
-
-                        m = [j for j in promoter_interaction_dict[bin_id]]
-                        element_promoter_interactions[id] = m
-
-        if is_repeat:
-            final = []
-            for repeat in element_promoter_interactions:
-                final.append(
-                    {"id": repeat, "interacted_promoters": element_promoter_interactions[repeat]})
-            csv_file_name = "promoters_overlap/interaction_" + file_name + "_promoter" + ".csv"
-            csv_col = ["id", "interacted_promoters", "type"]
-
-        if is_RNA:
-            final = []
-            for RNA in element_promoter_interactions:
-                final.append(
-                    {"id": RNA, "interacted_promoters": element_promoter_interactions[RNA]})
-            csv_file_name = "promoters_overlap/interaction_" + file_name + "_promoter" + ".csv"
-            csv_col = ["id", "interacted_promoters"]
-
-        try:
-            with open(csv_file_name, 'w', newline="") as csv_file:
-                writer = csv.DictWriter(csv_file, fieldnames=csv_col)
-                writer.writeheader()
-                for data in final:
-                    writer.writerow(data)
-        except IOError:
-            print("I/O error / can not write on csv file")
-
-
-        # print("===============================")
-        # print(len(final))
-        # print(len(element_data_2))
-        # print(len(element_data_2) - len(final))
-        # m = len(final) / len(element_data_2)
-        # n = (len(element_data_2) - len(final)) / len(element_data_2)
-        # print(m, n, "type 1")
-        # self.draw_bar_chart(m, n, file_name, 1)
-
-        # print(total_len)
-        # print(len(element_data))
-        # print(len(set(x)))
-        # print(len(element_data) - len(set(x)))
-
-        promoter_related = len(set(x))
-
-        # print(promoter_related)
-        non_promoter_related = len(element_data) - len(set(x))
-
-        # print(promoter_related)
-        # print(PROMOTERS_INTERACTIONS_REGIONS - promoter_related)
-        # print(non_promoter_related)
-        # print(NON_PROMOTER_INTERACTIONS_REGIONS - non_promoter_related)
-
-        m = promoter_related / PROMOTERS_INTERACTIONS_REGIONS
-        n = non_promoter_related / NON_PROMOTER_INTERACTIONS_REGIONS
-        self.draw_bar_chart(m, n, file_name, 2)
-        print(m, n, "type2")
-
-        obs = np.array([[promoter_related, non_promoter_related], [PROMOTERS_INTERACTIONS_REGIONS - promoter_related, NON_PROMOTER_INTERACTIONS_REGIONS - non_promoter_related]])
-        print(chi2_contingency(obs))
-
-        print("finish : " + file_name)
-        return m
-
-    # return id of region that promoter interacted with
-    def interacted_id_promoter(self, csv_file_name):
-
-        promoter_data = pd.read_csv(csv_file_name, header=None)
-        promoter_data.columns = list(promoter_data.loc[0])
-        print(list(promoter_data.loc[0]))
-        promoter_dict = {}
-
-        for n in range(1, len(promoter_data)):
-            interacted_id = promoter_data.at[n, "related_interactions_id"]
-            interacted_ids = ast.literal_eval(interacted_id)
-
-            promoter_id = promoter_data.at[n, "promoter_ID"]
-            for id in interacted_ids:
-                id = int(id)
-                if id in promoter_dict:
-                    if promoter_id not in promoter_dict[id]:
-                        promoter_dict[id].append(promoter_id)
-                else:
-                    promoter_dict[id] = [promoter_id]
-
-        print(len(set(promoter_dict)))
-        return promoter_dict
-
-    def draw_bar_chart(self, m, n, name, type):
-        if type == 2:
-            objects = ("Promoters related bins \n that have interactions with \n" + name,
-                       "non-promoters related bins \n that have interactions with \n" + name)
-        if type == 1:
-            objects = (name + "s that overlap with \n promoters related \n bins ",
-                       name + "s that overlap with \n non-promoter related \n bins ")
-
-        y_pos = np.arange(len(objects))
-        performance = [m * 100, n * 100]
-        plt.clf()
-        bar_list = plt.bar(y_pos, performance, align='center', alpha=0.5, width=0.2)
-        bar_list[0].set_color('c')
-        plt.xticks(y_pos, objects)
-        plt.ylabel('interactions percentage')
-        plt.xlim(-0.6, 1 + .6)
-        plt.title(name + ' and promoters\' interactions')
-        plt.savefig("chart_v3_promoter" + str(type) + "/" + name + ".png")
-        # plt.show()
 
     def read_enhancer(self):
 
@@ -564,7 +197,6 @@ class Hic_proj_overlap():
                 temp = temp.sort_values(by=['start'])
                 temp = temp.reset_index(drop=True)
 
-
                 self.enhancers_data_seprated.append(temp)
 
             print(len(enhancers_data))
@@ -582,14 +214,14 @@ class Hic_proj_overlap():
         unique = ids - res_ids
         print(len(unique))
         new_df = element_data.loc[element_data['id'].isin(unique)]
-        new_df.to_csv("enhancer/new_Repressed_v3.csv",index=False)
+        new_df.to_csv("enhancer/new_Repressed_v3.csv", index=False)
 
-    def make_bin_dictionary_interactions(self):
+    def make_bin_dictionary_interactions(self, HiC_file_name):
 
         bins_dicts = {}
         unique = []
         temp = []
-        interaction_file_name = "HMEC_SRR1658680_5k_0.01_5reads_2.05.19.txt"
+        interaction_file_name = HiC_file_name
 
         interaction_data = pd.read_csv(interaction_file_name, sep="\t", header=None)
         interaction_data.columns = ['INT_ID', 'F1_ID', 'F1_chr', 'F1_start', 'F1_end', 'F2_ID', 'F2_chr', 'F2_start',
@@ -632,19 +264,18 @@ class Hic_proj_overlap():
                 bins_dicts[int(bin)].append(int(F1_bin[n]))
         unique = sorted(unique, key=lambda i: i['id'])
         print(len(unique))
-        csv_columns = ["id","start","end","chr"]
+        csv_columns = ["id", "start", "end", "chr"]
         try:
-            with open("bin_data/new_unique_bin.csv", 'w', newline='') as csvfile:
+            with open("bin_data/Neun_new_unique_bin.csv", 'w', newline='') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
                 writer.writeheader()
                 for data in unique:
                     writer.writerow(data)
         except IOError:
             print("I/O error / can not write on csv file")
-        # print(bins_dicts)
+        # # print(bins_dicts)
 
-        # return bins_dicts
-
+        return bins_dicts
 
     def check_specific_location(self, id, start, end, chr):
 
@@ -683,17 +314,459 @@ class Hic_proj_overlap():
 
                 # len(self.data_hetrochromatin_overlap)
 
+    def enhancer_pre_processing(self):
+
+        data = pd.read_csv("Brain_chromatin_states_merged_samples_FID.txt", header = None, sep="\t")
+        data.columns = list(data.loc[0][:])
+        m = data.elemnet_ID.unique()
+        print(m)
+        # enhancer_data = data.query("elemnet_ID.str.contains('enhancer_')" )
+        enhancer_data = data.query("elemnet_ID.str.contains('Repressed PolyComb')")
+        enhancer_data = enhancer_data.reset_index(drop=True)
+        enhancer_data = enhancer_data[['chr','start','end','elemnet_ID','sample_ID']]
+        enhancer_data.to_csv("enhancer/brain_Repressed.csv")
+
+    def with_threshold(self,threshold,file_name):
+        enhancer_data = pd.read_csv("enhancer/brain_enhancer_file.csv", header=None)
+        enhancer_data.columns = list(enhancer_data.loc[0][:])
+        overlap_data = pd.read_csv(file_name+".csv")
+        overlap_data.columns = ["bin_id","enhancer_id"]
+        id = enhancer_data["id"].to_list()
+        sample_id = enhancer_data["sample_ID"].to_list()
+
+        val = enhancer_data.sample_ID.unique()
+        # print(val)
+
+        sample_id_dict = {}
+        for i,j in zip(id,sample_id) :
+            sample_id_dict[i] = j
+
+        in_threshold = {}
+        for i in range(len(overlap_data)) :
+            bin = overlap_data.at[i,"bin_id"]
+            overlaped_enhancer = ast.literal_eval(overlap_data.at[i,"enhancer_id"])
+            sample_ids = []
+            for j in overlaped_enhancer :
+                sample_ids.append(sample_id_dict[j])
+            sample_ids = set(sample_ids)
+            if len(sample_ids) >= threshold :
+                in_threshold[bin] = overlaped_enhancer
+
+        print(len(in_threshold))
+        print(len(set(in_threshold)))
+
+        csv_file_name = file_name +"_"+ str(threshold) + ".csv"
+        csv_col = ["bin_id","enhancer_id"]
+
+        try:
+            with open(csv_file_name, 'w', newline='') as f:
+                writer = csv.writer(f)
+                for row in in_threshold.items():
+                    writer.writerow(row)
+        except IOError:
+            print("I/O error / can not write on csv file")
+
+    ###################################################################### RNA
+
+
+
+    def seprate_by_chr(self, data):
+        m = []
+        for chr in range(1, 24):
+            s = str(chr)
+            temp = data.query("chr == @chr or chr == @s")
+            temp = temp.reset_index(drop=True)
+            temp = temp.sort_values(by=['bin_start'])
+            self.bin_seprated.append(temp)
+            m.append(len(temp))
+
+        print("=====>  ", sum(m))
+
+    # find all RNAs overlaps
+    def find_RNAs_overlp(self, RNA_file_name,promoter_overlap_file_name, csv_file_name,path2, is_RNA=True,
+                         is_exon=False,
+                         is_repeat=False, is_enhancer=False):
+        # preprocessing ovelap data
+        bin_data = pd.read_csv(csv_file_name, header=None)
+        bin_data.columns = ["bin_id", "bin_start", "bin_end", "chr"]
+        bin_data = bin_data.loc[1:].astype('int64')
+        bin_data = bin_data.sort_values(by=['bin_start'])
+        print(len(bin_data))
+        self.seprate_by_chr(bin_data)
+        if is_enhancer:
+            path = "enhancer/"
+        if is_RNA or is_exon:
+            path = "elements/"
+
+        data = pd.read_csv(path + RNA_file_name + "_file.csv", header=None)
+        data.columns = list(data.loc[0])
+        data = data.loc[1:]
+        data = data.astype({'start': 'int64'})
+        data = data.astype({'end': 'int64'})
+        data = data.sort_values(by=['start'])
+        print("name of resded data : ", RNA_file_name)
+        print("length of reading data : ", len(data))
+        print("finish reading ! ")
+        print("start processing !")
+        self.interaction = []
+        self.duplicate = []
+        self.bin_id_interacted_with_elements = {}
+        self.temp_bin = []
+        t1 = datetime.datetime.now()
+        v = np.vectorize(self.check_RNAs_overlap)
+
+        v(data["start"].tolist(), data["end"].tolist(), data["id"].tolist(),data["chr"].tolist(),
+          "", is_RNA or is_enhancer, is_exon, is_repeat)
+
+        ################################
+        # path = "brain_results/"
+        print("finish finding overlaps ! ")
+        # csv_file_name = path + "BRAIN_CNON_interaction_overlap_" + RNA_file_name + "_file.csv"
+        # csv_col = ['element_id', 'bin_id', 'bin_start', 'bin_end', 'element_start', 'element_end', 'chr',
+        #            'overlap_bp']
+        csv_file_name2 = path2 + "element_overlap/" +"interaction_overlap_" + RNA_file_name + "_file.csv"
+
+        print("number of bin_id : ", len(self.bin_id_interacted_with_elements))
+
+        if is_repeat:
+            # for i in range(1, 12):
+            self.interaction = []
+            path = "repeat/"
+            repeat_data = pd.read_csv(path + RNA_file_name + ".csv", header=None)
+            # repeat_file_name = "repeatMasker.csv" + str(i) + ".csv"
+            # repeat_data = pd.read_csv(repeat_file_name, header=None, error_bad_lines=False, engine="c")
+            repeat_data.columns = ["id", "chr", "start_repeat", "end_repeat", "type_of_repeat"]
+            repeat_data = repeat_data.loc[1:]
+            repeat_data = repeat_data.astype({'start_repeat': 'int64'})
+            repeat_data = repeat_data.astype({'end_repeat': 'int64'})
+            repeat_data = repeat_data.sort_values(by=['start_repeat'])
+            print("name of resded data : ", RNA_file_name)
+            print("lenth of reading data : ", len(repeat_data))
+            print("finish reading ! ")
+            print("start processing !")
+            t1 = datetime.datetime.now()
+            v = np.vectorize(self.check_RNAs_overlap)
+
+            v(repeat_data.loc[:]["start_repeat"], repeat_data.loc[:]["end_repeat"], repeat_data.loc[:]["id"],
+              repeat_data.loc[:]["chr"], repeat_data.loc[:]["type_of_repeat"], is_RNA, is_exon, is_repeat)
+
+            csv_file_name = "repeat/interaction_overlap_" + RNA_file_name + ".csv"
+            csv_col = ['bin_id', 'element_id', 'bin_start', 'bin_end', 'element_start', 'element_end', 'chr',
+                       'type_of_repeat', 'overlap_bp']
+            csv_file_name2 = "repeat/bin_id_interaction_overlap_" + RNA_file_name + "_file.csv"
+            print("number of bin_id : ", len(self.repeat_bin))
+
+
+        # try:
+        #     with open(csv_file_name, 'w', newline='') as csv_file:
+        #         writer = csv.DictWriter(csv_file, fieldnames=csv_col)
+        #         writer.writeheader()
+        #         for data in self.interaction:
+        #             writer.writerow(data)
+        # except IOError:
+        #     print("I/O error / can not write on csv file")
+        try:
+            with open(csv_file_name2, 'w', newline='') as f:
+                writer = csv.writer(f)
+                for row in self.bin_id_interacted_with_elements.items():
+                    writer.writerow(row)
+        except IOError:
+            print("I/O error / can not write on csv file")
+        t2 = datetime.datetime.now()
+        print("time: ", t2 - t1)
+        self.promoter_element_interaction_annotation(csv_file_name2,promoter_overlap_file_name,path2,RNA_file_name, is_RNA=is_RNA, is_repeat = is_repeat,is_enhancer = is_enhancer,th = "0")
+    # check RNA overlap with interactions
+    def check_RNAs_overlap(self, start, end, id, chr, type, is_RNA, is_exon, is_repeat):
+        self.m += 1
+        if self.m % 100000 == 0:
+            print(self.m)
+        if is_repeat:
+            chr = chr.replace("chr", "")
+        if chr == "X" or chr == "Y":
+            chr = 23
+        try:
+            chr = int(chr)
+        except:
+            chr = 24
+        chr = int(chr)
+        if chr < 24:
+            bin_data = self.bin_seprated[int(chr) - 1]
+            bin_start = bin_data["bin_start"].tolist()
+            bin_end = bin_data["bin_end"].tolist()
+            bin_id = bin_data["bin_id"].tolist()
+            length = end - start - 10
+            start_index = np.searchsorted(bin_end, start - length)
+            end_index = np.searchsorted(bin_start, end)
+            i = start_index
+            # if start_index >= 2:
+            #     i = i - 2
+            while i <= end_index:
+                if end_index >= len(bin_end):
+                    break
+                if start > bin_start[i] - length and end < bin_end[i] + length:
+                    id_BIN = bin_id[i]
+                    # if start < bin_start[i] and end < bin_end[i]:
+                    #     bp_overlap = end - bin_start[i]
+                    # elif start >= bin_start[i] and end <= bin_end[i]:
+                    #     bp_overlap = end - start
+                    # elif start >= bin_start[i] and end > bin_end[i]:
+                    #     bp_overlap = bin_end[i] - start
+                    # elif start < bin_start[i] and end > bin_end[i]:
+                    #     bp_overlap = 5000  # bin_length
+                    # else:
+                    #     bp_overlap = 0
+
+                    if is_repeat:
+                        # if id_BIN not in self.repeat_bin:
+                        self.repeat_bin.add(id_BIN)
+                            # exist_id = {}
+                            # for sub_dict in self.interaction:
+                            #     if sub_dict["element_id"] == id:
+                            #         exist_id = sub_dict
+                            #         break
+                            # if len(exist_id) == 0:
+                            # self.interaction.append(
+                            #     {"element_id": id, "bin_id": [id_BIN], "bin_start": [bin_start[i]],
+                            #      "bin_end": [bin_end[i]],
+                            #      "element_start": start, "element_end": end, "chr": chr, "overlap_bp": [bp_overlap]})
+                            # else:
+                            #     exist_id = exist_id
+                            #     if id_BIN not in exist_id["bin_id"]:
+                            #         exist_id["bin_id"].append(id_BIN)
+                            #         exist_id["bin_start"].append(bin_start[i])
+                            #         exist_id["bin_end"].append(bin_end[i])
+                            #         exist_id["overlap_bp"].append(bp_overlap)
+
+                            # if id_BIN not in self.bin_id_interacted_with_elements:
+                            #     self.bin_id_interacted_with_elements[id_BIN] = [id]
+                            # else:
+                            #     if id not in self.bin_id_interacted_with_elements[id_BIN]:
+                            #         self.bin_id_interacted_with_elements[id_BIN].append(id)
+
+                            # self.interaction.append(
+                            #     {"bin_id": id_BIN, "repeat_id": id, "bin_start": bin_start[i], "bin_end": bin_end[i],
+                            #      "repeat_start": start, "repeat_end": end, "chr": chr, "type_of_repeat": type,
+                            #      "overlap_bp": bp_overlap})
+                    if is_RNA or is_exon:
+                        # exist_id = {}
+                        # for sub_dict in self.interaction:
+                        #     if sub_dict["element_id"] == id:
+                        #         exist_id = sub_dict
+                        #         break
+                        # if len(exist_id) == 0:
+                        #     self.interaction.append(
+                        #         {"element_id": id, "bin_id": [id_BIN], "bin_start": [bin_start[i]],
+                        #          "bin_end": [bin_end[i]],
+                        #          "element_start": start, "element_end": end, "chr": chr, "overlap_bp": [bp_overlap]})
+                        # else:
+                        #     exist_id = exist_id
+                        #     if id_BIN not in exist_id["bin_id"]:
+                        #         exist_id["bin_id"].append(id_BIN)
+                        #         exist_id["bin_start"].append(bin_start[i])
+                        #         exist_id["bin_end"].append(bin_end[i])
+                        #         exist_id["overlap_bp"].append(bp_overlap)
+                        t = set(self.temp_bin)
+                        if id_BIN not in t:
+                            self.temp_bin.append(id_BIN)
+                            self.bin_id_interacted_with_elements[id_BIN] = [id]
+                        else:
+                            if id not in self.bin_id_interacted_with_elements[id_BIN]:
+                                self.bin_id_interacted_with_elements[id_BIN].append(id)
+                i += 1
+
+    # find elements which interact by promoter
+    def promoter_element_interaction_annotation(self, file_name, p_file_name, path,element_name,is_RNA=True,
+                                                is_exon=False, is_repeat=False,is_enhancer = False ,th = "0"):
+        total_len = []
+        x = []
+        self.repeat_bin = set(self.repeat_bin)
+        promoter_interaction_dict = self.interacted_id_promoter(p_file_name)
+        if is_repeat:
+            element_data = list(self.repeat_bin)
+            for bin_id in element_data:
+                if bin_id in promoter_interaction_dict:
+                    x.append(bin_id)
+
+            promoter_related = len(set(x))
+            # print(promoter_related)
+            non_promoter_related = len(element_data) - len(set(x))
+            m = promoter_related / PROMOTERS_INTERACTIONS_REGIONS
+            n = non_promoter_related / NON_PROMOTER_INTERACTIONS_REGIONS
+            print(m, n, "type2")
+            self.draw_bar_chart(m, n, file_name, 2,0)
+            return
+
+            # element_data = pd.read_csv("repeat/bin_id_interaction_overlap_" + file_name + "_file.csv",
+            #                            header=None)
+            # element_data.columns = ['bin_id', 'element_id']
+            # element_data_2 = pd.read_csv(
+            #     "repeat/interaction_overlap_" + file_name + ".csv", header=None)
+
+        element_data = pd.read_csv(file_name,header=None)
+        element_data.columns = ['bin_id', 'element_id']
+
+        element_promoter_interactions = {}
+        x = []
+        for n in range(0, len(element_data)):
+            bin_id = int(element_data.at[n, "bin_id"])
+            ids = element_data.at[n, "element_id"]
+            ids = ast.literal_eval(ids)
+
+            if bin_id in promoter_interaction_dict:
+                x.append(bin_id)
+                for id in ids:
+                    if id in element_promoter_interactions:
+                        for j in promoter_interaction_dict[bin_id]:
+                            element_promoter_interactions[id].append(j)
+                    else:
+
+                        m = [j for j in promoter_interaction_dict[bin_id]]
+                        element_promoter_interactions[id] = m
+
+        if is_repeat:
+            final = []
+            for repeat in element_promoter_interactions:
+                final.append(
+                    {"id": repeat, "interacted_promoters": element_promoter_interactions[repeat]})
+            csv_file_name = "promoters_overlap/interaction_" + file_name + "_promoter" + ".csv"
+            csv_col = ["id", "interacted_promoters", "type"]
+
+        if is_RNA or is_enhancer:
+            final = []
+            for RNA in element_promoter_interactions:
+                final.append(
+                    {"id": RNA, "interacted_promoters": element_promoter_interactions[RNA]})
+            csv_file_name =  path+"promoter_annotation/"+"promoter_annotation"+element_name+".csv"
+            csv_col = ["id", "interacted_promoters"]
+
+        print(csv_file_name)
+        try:
+            with open(csv_file_name, 'w', newline="") as csv_file:
+                writer = csv.DictWriter(csv_file, fieldnames=csv_col)
+                writer.writeheader()
+                for data in final:
+                    writer.writerow(data)
+        except IOError:
+            print("I/O error / can not write on csv file")
+
+        # print("===============================")
+        # print(len(final))
+        # print(len(element_data_2))
+        # print(len(element_data_2) - len(final))
+        # m = len(final) / len(element_data_2)
+        # n = (len(element_data_2) - len(final)) / len(element_data_2)
+        # print(m, n, "type 1")
+        # self.draw_bar_chart(m, n, file_name, 1)
+
+        # print(total_len)
+        # print(len(element_data))
+        # print(len(set(x)))
+        # print(len(element_data) - len(set(x)))
+
+        promoter_related = len(set(x))
+
+        # print(promoter_related)
+        non_promoter_related = len(element_data) - len(set(x))
+
+        # print(promoter_related)
+        # print(PROMOTERS_INTERACTIONS_REGIONS - promoter_related)
+        # print(non_promoter_related)
+        # print(NON_PROMOTER_INTERACTIONS_REGIONS - non_promoter_related)
+
+        m = promoter_related / PROMOTERS_INTERACTIONS_REGIONS
+        n = non_promoter_related / NON_PROMOTER_INTERACTIONS_REGIONS
+        self.draw_bar_chart(m, n, element_name, 2,int(th),path)
+        print(m, n, "type2")
+
+        obs = np.array([[promoter_related, non_promoter_related], [PROMOTERS_INTERACTIONS_REGIONS - promoter_related,
+                                                                   NON_PROMOTER_INTERACTIONS_REGIONS - non_promoter_related]])
+        print(chi2_contingency(obs))
+
+        print("finish : " + file_name + th)
+        return m
+    # return id of region that promoter interacted with
+    def interacted_id_promoter(self, csv_file_name):
+
+        promoter_data = pd.read_csv(csv_file_name, header=None)
+        promoter_data.columns = list(promoter_data.loc[0])
+        print(list(promoter_data.loc[0]))
+        promoter_dict = {}
+
+        for n in range(1, len(promoter_data)):
+            interacted_id = promoter_data.at[n, "related_interactions_id"]
+            interacted_ids = ast.literal_eval(interacted_id)
+
+            promoter_id = promoter_data.at[n, "promoter_ID"]
+            for id in interacted_ids:
+                id = int(id)
+                if id in promoter_dict:
+                    if promoter_id not in promoter_dict[id]:
+                        promoter_dict[id].append(promoter_id)
+                else:
+                    promoter_dict[id] = [promoter_id]
+
+        print(len(set(promoter_dict)))
+        return promoter_dict
+
+    def draw_bar_chart(self, m, n, name, type,th,path):
+        if type == 2:
+            objects = ("Promoters related bins \n that have interactions with \n" + name,
+                       "non-promoters related bins \n that have interactions with \n" + name)
+        if type == 1:
+            objects = (name + "s that overlap with \n promoters related \n bins ",
+                       name + "s that overlap with \n non-promoter related \n bins ")
+
+        y_pos = np.arange(len(objects))
+        performance = [m * 100, n * 100]
+        plt.clf()
+        bar_list = plt.bar(y_pos, performance, align='center', alpha=0.9, width=0.2)
+        bar_list[1].set_color('darkseagreen')
+        bar_list[0].set_color('lightgreen')
+        plt.xticks(y_pos, objects)
+        plt.ylabel('interactions percentage')
+        plt.xlim(-0.6, 1 + .6)
+        plt.title(name + ' and promoters\' interactions with threshold :'+ str(th) )
+        plt.savefig(path+"chart/"+ name + str(th) + ".png")
+        # plt.show()
+
 
 p = Hic_proj_overlap()
+# p.make_bin_dictionary_interactions("Neun/Brain_NEUNplus_5k_0.001_2.01.20.txt")
+
 # p.interacted_id_promoter()
 # p.count_promoters("miRNA")
-#["Strong_Enhancer","new_Heterochrom_v3","Insulator","new_Repetitive_v3","new_Repressed_v3"]
+# ["Strong_Enhancer","new_Heterochrom_v3","Insulator","new_Repetitive_v3","new_Repressed_v3"]
 # ["miRNA","lincRNA","snRNA","rRNA","pseudogene"]
 # ["enhancer","Strong_Enhancer","Heterochrom","Insulator","Repressed","Repetitive"]
 
-for i in ["lncRNA"]:
-    # p.find_RNAs_overlp(i, is_RNA = True,is_repeat= False, is_enhancer=False, is_exon=False)
-    p.promoter_element_interaction_annotation(i,"promoter/new_overlap_promoter_version2.csv", is_RNA=True, is_repeat=False)
+# for i in ["brain_Heterochromatin"]:
+#     p.find_RNAs_overlp(i,"promoter/SEP45_overlap_promoter.csv","bin_data/SEP45_new_unique_bin.csv","SEP45/", is_RNA=False, is_repeat=False, is_enhancer=True, is_exon=False)
+
+for i in ["enhancer"] :
+    for j in [0,3,5,7] :
+        p.promoter_element_interaction_annotation("SEP45/element_overlap/interaction_overlap_brain_"+i+"_file_"+str(j)+".csv","promoter/SEP45_overlap_promoter.csv","SEP45/",i,th=str(j))
+# p.with_threshold(5,"SEP45\element_overlap\interaction_overlap_brain_Heterochromatin_file")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# p.promoter_element_interaction_annotation(i,"promoter/Neun-_overlap_promoter.csv", is_RNA=True, is_repeat = False,th="3")
+# p.enhancer_pre_processing()
+
+
+# p.enhancer_pre_processing()
 # p.read()
 # p.read_enhancer()
 # p.split_enhancer()

@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import ast
 
+
 # from datetime import datetime
 class Hic_proj():
     def __init__(self, gene_gtf_file_name, interaction_txt_file_name, prmoters_csv_file_name, overlaps_csv_file_name):
@@ -28,7 +29,7 @@ class Hic_proj():
     def find_intron(self):
 
         data_frame = read_gtf("t.gtf",
-                              usecols=['start','end','gene_id','seqname','feature'])
+                              usecols=['start', 'end', 'gene_id', 'seqname', 'feature'])
         exons_pos = {}
         gene_exons = {}
         gene_pos = {}
@@ -39,32 +40,31 @@ class Hic_proj():
         gene_data = data_frame.query('feature == "gene"')
         gene_data = gene_data.reset_index(drop=True)
         print(len(gene_data))
-        for i in range(len(gene_data)) :
-            id = gene_data.at[i,"gene_id"]
-            if id not in gene_pos :
-                gene_pos[id] = [gene_data.at[i,"start"],gene_data.at[i,"end"]]
+        for i in range(len(gene_data)):
+            id = gene_data.at[i, "gene_id"]
+            if id not in gene_pos:
+                gene_pos[id] = [gene_data.at[i, "start"], gene_data.at[i, "end"]]
 
         print(len(gene_pos))
         counter = 0
         print("here")
-        for n,id in enumerate(gene_id) :
-            if n % 1000 == 0 :
+        for n, id in enumerate(gene_id):
+            if n % 1000 == 0:
                 print(n)
             gene_ex = exon_data.query('gene_id == @id')
             gene_ex = gene_ex.reset_index(drop=True)
             pos = []
-            for e in range(len(gene_ex)) :
-                position = [gene_ex.at[e,"start"], gene_ex.at[e,"end"]]
-                if position not in pos :
+            for e in range(len(gene_ex)):
+                position = [gene_ex.at[e, "start"], gene_ex.at[e, "end"]]
+                if position not in pos:
                     pos.append(position)
-                    ex_id = "exon_" + str(counter) +"_"+ str(gene_ex.at[e,"seqname"])
+                    ex_id = "exon_" + str(counter) + "_" + str(gene_ex.at[e, "seqname"])
                     exons_pos[ex_id] = position
-                    if id not in gene_exons :
+                    if id not in gene_exons:
                         gene_exons[id] = [ex_id]
                     else:
                         gene_exons[id].append(ex_id)
-                    counter+=1
-
+                    counter += 1
 
         print(len(gene_exons))
         print(len(exons_pos))
@@ -84,7 +84,6 @@ class Hic_proj():
             for key, value in gene_exons.items():
                 writer.writerow([key, value])
 
-
         with open('exons/gene_exons.csv') as csv_file:
             reader = csv.reader(csv_file)
             gene_exons = dict(reader)
@@ -102,32 +101,32 @@ class Hic_proj():
         counter = 0
         nn = 0
 
-        for gene in gene_exons :
-            if nn % 1000 == 0 :
+        for gene in gene_exons:
+            if nn % 1000 == 0:
                 print(nn)
-            nn+=1
+            nn += 1
             gene_position = ast.literal_eval(gene_pos[gene])
             gene_ex = ast.literal_eval(gene_exons[gene])
             positions = []
-            for exon in gene_ex :
+            for exon in gene_ex:
                 pos = ast.literal_eval(exons_pos[exon])
-                positions.append((int(pos[0]),int(pos[1])))
+                positions.append((int(pos[0]), int(pos[1])))
 
-            positions  = sorted(positions,key=lambda x: x[0])
+            positions = sorted(positions, key=lambda x: x[0])
 
-            for i in range(len(positions) - 2) :
-                if positions[i][1] > positions[i+1][0] :
+            for i in range(len(positions) - 2):
+                if positions[i][1] > positions[i + 1][0]:
                     continue
-                p = [positions[i][1],positions[i+1][0]]
-                intron_id = "intron_" + str(counter) +"_"+ exon.split("_")[2]
+                p = [positions[i][1], positions[i + 1][0]]
+                intron_id = "intron_" + str(counter) + "_" + exon.split("_")[2]
                 introns_pos[intron_id] = p
-                counter+=1
+                counter += 1
 
-            if gene_position[0] != positions[0][0] :
-                intron_id = "intron_" + str(counter) +"_"+ exon.split("_")[2]
-                introns_pos[intron_id] = [gene_position[0],positions[0][0]]
-                counter+=1
-            intron_id = "intron_" + str(counter) +"_"+ exon.split("_")[2]
+            if gene_position[0] != positions[0][0]:
+                intron_id = "intron_" + str(counter) + "_" + exon.split("_")[2]
+                introns_pos[intron_id] = [gene_position[0], positions[0][0]]
+                counter += 1
+            intron_id = "intron_" + str(counter) + "_" + exon.split("_")[2]
             introns_pos[intron_id] = [positions[-1][1], gene_position[1]]
             counter += 1
 
@@ -135,7 +134,6 @@ class Hic_proj():
             writer = csv.writer(csv_file)
             for key, value in introns_pos.items():
                 writer.writerow([key, value])
-
 
     def pre_process_intron_exons(self):
 
@@ -149,22 +147,22 @@ class Hic_proj():
 
         new_introns = []
         new_exons = []
-        for exon in exons :
+        for exon in exons:
             pos = ast.literal_eval(exons[exon])
             start = pos[0]
             end = pos[1]
             chr = exon.split("_")[2]
-            new_exons.append({"id":exon,"start":start,"end":end,"chr":chr})
+            new_exons.append({"id": exon, "start": start, "end": end, "chr": chr})
 
-        for intron in introns :
+        for intron in introns:
             pos = ast.literal_eval(introns[intron])
             start = pos[0]
             end = pos[1]
             chr = intron.split("_")[2]
-            new_introns.append({"id":intron,"start":start,"end":end,"chr":chr})
+            new_introns.append({"id": intron, "start": start, "end": end, "chr": chr})
 
         csv_file = "elements/introns.csv"
-        csv_columns = ['id', 'start', 'end' , 'chr']
+        csv_columns = ['id', 'start', 'end', 'chr']
 
         try:
             with open(csv_file, 'w', newline='') as csvfile:
@@ -188,12 +186,12 @@ class Hic_proj():
             print("I/O error / can not write on csv file")
 
     def read_gene_gtf_file(self):
-        #['start','end','gene_name','gene_id','seqname','exon_number','feature']
+        # ['start','end','gene_name','gene_id','seqname','exon_number','feature']
         data_frame = read_gtf(self.gene_gtf_file_name,
-                              usecols=['start','end','seqname','feature','gene_biotype'])
+                              usecols=['start', 'end', 'seqname', 'feature', 'gene_biotype'])
 
         data = data_frame.query("feature == 'gene'")
-        data = data.reset_index(drop = True)
+        data = data.reset_index(drop=True)
         data.to_csv("gene_file.csv")
         # data_frame.to_csv(s   elf.gene_gtf_file_name)
         # exon_data1 = exon_data.query('exon_number == "1"')
@@ -286,33 +284,41 @@ class Hic_proj():
     def read_promter_csv_file(self):
         print(self.prmoters_csv_file_name)
         self.promoters_data = pd.read_csv(self.prmoters_csv_file_name, header=None)
-        self.promoters_data.columns = ["promoter_id", "start", "end", "gene_name","gene_id", "chr"]
+        self.promoters_data.columns = ["promoter_id", "start", "end", "gene_name", "gene_id", "chr"]
 
         # self.promoters_data = self.promoters_data.loc[:100][:]
 
-    def read_interaction_txt_file(self):
+    def read_interaction_txt_file(self, file_name="", mode=0):
 
-        # self.interaction_data = pd.read_csv(self.interaction_txt_file_name, sep="\t", header=None,
-        #                                     dtype={'F1_start': int})
-        # self.interaction_data.columns = ["INT_ID", "F1_ID", "F1_chr", "F1_start", "F1_end", "F2_ID", "F2_chr",
-        #                                  "F2_start",
-        #                                  "F2_end", "distance",
-        #                                  "interacting_read", "logpvalue"]
-        #
-        # self.interaction_data = self.interaction_data[1:]
-        # self.interaction_data = self.interaction_data.astype({'F1_start': 'int64'})
-        # self.interaction_data = self.interaction_data.astype({'F1_end': 'int64'})
-        # self.interaction_data = self.interaction_data.astype({'F2_start': 'int64'})
-        # self.interaction_data = self.interaction_data.astype({'F2_end': 'int64'})
+        if mode == 1:
+            interaction_data = pd.read_csv(self.interaction_txt_file_name, sep="\t", header=None)
+            interaction_data.columns = ['INT_ID', 'F1_ID', 'F1_chr', 'F1_start', 'F1_end', 'F5promoter', 'F5enhancer',
+                                        'F5_cell_enhancer', 'F5_tissue_enhancer', 'h3k27ac', 'h3k9me3', 'CTCF',
+                                        'hmm_fraction', 'hmm', 'promoter_region_of_gene', 'gene_symbol', 'gene_type',
+                                        'F2_ID', 'F2_chr', 'F2_start', 'F2_end', 'F5promoter', 'F5enhancer', 'F5_cell_enhancer',
+                                        'F5_tissue_enhancer', 'h3k27ac', 'h3k9me3', 'CTCF', 'hmm_fraction', 'hmm',
+                                        'promoter_region_of_gene', 'gene_symbol', 'gene_type', 'distance',
+                                        'interacting_read', 'logpvalue']
+            print(list(interaction_data.loc[0]))
+            interaction_dict = []
+            interaction_data = interaction_data.loc[1:]
+            new_dataframe = interaction_data[["INT_ID", "F1_ID", "F1_chr", "F1_start", "F1_end", "F2_ID", "F2_chr",
+                                              "F2_start",
+                                              "F2_end", "distance",
+                                              "interacting_read", "logpvalue"]]
 
-        bin_data = pd.read_csv("bin_data/new_unique_bin.csv", header=None)
-        bin_data.columns = ["bin_id", "start", "end", "chr"]
-        bin_data = bin_data.loc[1:].astype('int64')
-        bin_data = bin_data.sort_values(by=['start'])
-        self.seprate_by_chr(bin_data)
-        self.interaction_data = bin_data
+            new_dataframe.to_csv("Neun-/Neun-_Neun_HiC.csv",index=False)
 
-        # self.seprate_by_chr(self.interaction_data)
+
+        if mode == 0:
+            bin_data = pd.read_csv(file_name, header=None)
+            bin_data.columns = ["bin_id", "start", "end", "chr"]
+            bin_data = bin_data.loc[1:].astype('int64')
+            bin_data = bin_data.sort_values(by=['start'])
+            self.seprate_by_chr(bin_data)
+            self.interaction_data = bin_data
+
+            # self.seprate_by_chr(self.interaction_data)
 
     def seprate_by_chr(self, data):
 
@@ -343,14 +349,14 @@ class Hic_proj():
             gene_id = self.exons_data.at[i, "gene_id"]
             self.probable_promoters.append(
                 {"promoter_id": "promoter_" + str(i), "start": start - 5000, "end": start + 1000,
-                 "gene_name": gene_name,"gene_id": gene_id ,"chr": seq_name})
+                 "gene_name": gene_name, "gene_id": gene_id, "chr": seq_name})
 
         self.write_promoter_places_to_csv()
 
     def write_promoter_places_to_csv(self):
 
         csv_file = "promoter/promoters_with_chr_v3.csv"
-        csv_columns = ['promoter_id', 'start', 'end', 'gene_name','gene_id', 'chr']
+        csv_columns = ['promoter_id', 'start', 'end', 'gene_name', 'gene_id', 'chr']
         try:
             with open(csv_file, 'w', newline='') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
@@ -366,10 +372,11 @@ class Hic_proj():
         bins_dicts = {}
         unique = []
         temp = []
-        interaction_file_name = "HMEC_SRR1658680_5k_0.01_5reads_2.05.19.txt"
+        interaction_file_name = self.interaction_txt_file_name
 
-        interaction_data = pd.read_csv(interaction_file_name, sep="\t", header=None)
-        interaction_data.columns = ['INT_ID', 'F1_ID', 'F1_chr', 'F1_start', 'F1_end', 'F2_ID', 'F2_chr', 'F2_start',
+        interaction_data = pd.read_csv(interaction_file_name, header=None)
+        interaction_data.columns = ['INT_ID', 'F1_ID', 'F1_chr', 'F1_start', 'F1_end', 'F2_ID', 'F2_chr',
+                                    'F2_start',
                                     'F2_end', 'distance', 'interacting_read', 'logpvalue']
         interaction_data = interaction_data.astype("str")
 
@@ -383,26 +390,6 @@ class Hic_proj():
         F2_end = list(interaction_data.loc[:]["F2_end"])
         F2_chr = list(interaction_data.loc[:]["F2_chr"])
 
-        # for i in ['promoter_188942', 'promoter_146272', 'promoter_60160', 'promoter_138975', 'promoter_60165', 'promoter_60159', 'promoter_155979', 'promoter_188946', 'promoter_84040', 'promoter_60164', 'promoter_60162', 'promoter_117050', 'promoter_60167', 'promoter_188943', 'promoter_98335', 'promoter_60158', 'promoter_60161', 'promoter_60166', 'promoter_104845', 'promoter_188941', 'promoter_138976', 'promoter_98334'] :
-        #     m  = self.promoters_data.query("promoter_id == @i")
-        #     print(m.index[0])
-        #     x = []
-        #     for j in range(1,len(F1_start)) :
-        #         if int(m.at[m.index[0],"chr"] == int(F1_chr[j])) :
-        #             if int(m.at[m.index[0],"start"]) > int(F1_start[j]) - 1990 and int(m.at[m.index[0],"end"]) < int(F1_end[j]) + 1990:
-        #                 # print("here1 , ", i)
-        #                 if F1_bin[j] not in x :
-        #                     x.append(F1_bin[j])
-        #                     print("here1 , ", i)
-        #                     print(m.at[m.index[0],"start"],F1_bin[j])
-        #     for j in range(1, len(F2_start)):
-        #         if int(m.at[m.index[0], "chr"] == int(F2_chr[j])):
-        #             if int(m.at[m.index[0],"start"]) > int(F2_start[j]) - 1990 and int(m.at[m.index[0],"end"]) < int(F2_end[j]) + 1990:
-        #                 if F2_bin[j] not in x:
-        #                     x.append(F2_bin[j])
-        #                     print("here2 , ", i)
-        #                     print(m.at[m.index[0], "start"], F2_start[j])
-        #     print("finish :", i)
 
         for n, bin in enumerate(F1_bin):
             temp.append(bin)
@@ -423,11 +410,70 @@ class Hic_proj():
                 bins_dicts[int(bin)].append(int(F1_bin[n]))
                 bins_dicts[int(bin)] = list(set(bins_dicts[int(bin)]))
         self.bin_dict = bins_dicts
-        # print(bins_dicts[143])
+        print(len(bins_dicts))
         return bins_dicts
 
+    # def make_bin_dictionary_interactions(self, HiC_file_name = ""):
+    #
+    #     bins_dicts = {}
+    #     unique = []
+    #     temp = []
+    #     interaction_file_name = self.interaction_txt_file_name
+    #     interaction_data = pd.read_csv(interaction_file_name , header=None)
+    #     interaction_data.columns = ['INT_ID', 'F1_ID', 'F1_chr', 'F1_start', 'F1_end', 'F2_ID', 'F2_chr', 'F2_start',
+    #                                 'F2_end', 'distance', 'interacting_read', 'logpvalue']
+    #     interaction_data = interaction_data.astype("str")
+    #
+    #     F1_bin = list(interaction_data.loc[:]["F1_ID"])
+    #     F1_start = list(interaction_data.loc[:]["F1_start"])
+    #     F1_end = list(interaction_data.loc[:]["F1_end"])
+    #     F1_chr = list(interaction_data.loc[:]["F1_chr"])
+    #
+    #     F2_bin = list(interaction_data.loc[:]["F2_ID"])
+    #     F2_start = list(interaction_data.loc[:]["F2_start"])
+    #     F2_end = list(interaction_data.loc[:]["F2_end"])
+    #     F2_chr = list(interaction_data.loc[:]["F2_chr"])
+    #
+    #     for n, bin in enumerate(F1_bin):
+    #         temp.append(bin)
+    #         if n == 0:
+    #             continue
+    #         if int(bin) not in bins_dicts:
+    #             unique.append(
+    #                 {"id": int(F1_bin[n]),
+    #                  "start": int(F1_start[n]),
+    #                  "end": int(F1_end[n]), "chr": int(F1_chr[n])})
+    #             bins_dicts[int(bin)] = [int(F2_bin[n])]
+    #         else:
+    #             bins_dicts[int(bin)].append(int(F2_bin[n]))
+    #     for n, bin in enumerate(F2_bin):
+    #         temp.append(bin)
+    #         if n == 0:
+    #             continue
+    #         if int(bin) not in bins_dicts:
+    #             unique.append(
+    #                 {"id": int(F2_bin[n]),
+    #                  "start": int(F2_start[n]),
+    #                  "end": int(F2_end[n]), "chr": int(F2_chr[n])})
+    #             bins_dicts[int(bin)] = [int(F1_bin[n])]
+    #         else:
+    #             bins_dicts[int(bin)].append(int(F1_bin[n]))
+    #     unique = sorted(unique, key=lambda i: i['id'])
+    #     print(len(unique))
+    #     # csv_columns = ["id", "start", "end", "chr"]
+    #     # try:
+    #     #     with open("bin_data/Neun-_new_unique_bin.csv", 'w', newline='') as csvfile:
+    #     #         writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+    #     #         writer.writeheader()
+    #     #         for data in unique:
+    #     #             writer.writerow(data)
+    #     # except IOError:
+    #     #     print("I/O error / can not write on csv file")
+    #
+    #     return bins_dicts
+
     def find_overlap_with_promoter_vectorize(self, promoter_id, promoter_start, promoter_end, promoter_chr,
-                                             promoter_gene_name,promoter_gene_id):
+                                             promoter_gene_name, promoter_gene_id):
 
         if not promoter_start == "start":
 
@@ -452,17 +498,17 @@ class Hic_proj():
                 start = temp_interaction.loc[:]['start']
                 end = temp_interaction.loc[:]['end']
                 id = temp_interaction.loc[:]['bin_id']
-                length = 2000 # or 2000
+                length = 2000  # or 2000
                 start_index = np.searchsorted(end, promoter_start - length)
                 end_index = np.searchsorted(start, promoter_end)
                 i = start_index
 
                 # if len(temp_interaction) != 0:
-                    # for i in range(0, len(temp_interaction)):
-                while i <= end_index :
+                # for i in range(0, len(temp_interaction)):
+                while i <= end_index:
                     if end_index >= len(end):
                         break
-                    if promoter_start > start[i] - 5990 and promoter_end < end[i] + 5990:
+                    if promoter_start > start[i] - 1990 and promoter_end < end[i] + 1990:
                         if promoter_start < start[i]:
                             bp_overlap = promoter_end - start[i]
                         elif promoter_start >= start[i] and promoter_end <= end[i]:
@@ -481,7 +527,7 @@ class Hic_proj():
                                                   "overlaped_element_end": [int(end[i])],
                                                   # "overlaped_element_INT_ID": [INT_ID],
                                                   "number_of_overlap_bp": [bp_overlap],
-                                                  "related_interactions_id" : [k for k in self.bin_dict[int(id[i])]]
+                                                  "related_interactions_id": [k for k in self.bin_dict[int(id[i])]]
                                                   })
 
                             self.is_exist.add(promoter_id)
@@ -494,85 +540,86 @@ class Hic_proj():
                                 exist_promoter[0]["overlaped_element_start"].append(start[i])
                                 exist_promoter[0]["overlaped_element_end"].append(end[i])
                                 exist_promoter[0]["number_of_overlap_bp"].append(bp_overlap)
-                                for j in self.bin_dict[id[i]] :
+                                for j in self.bin_dict[id[i]]:
                                     exist_promoter[0]["related_interactions_id"].append(j)
-                                exist_promoter[0]["related_interactions_id"] = list(set(exist_promoter[0]["related_interactions_id"]))
-                                    # exist_promoter[0]["overlaped_element_INT_ID"].append(INT_ID)
+                                exist_promoter[0]["related_interactions_id"] = list(
+                                    set(exist_promoter[0]["related_interactions_id"]))
+                                # exist_promoter[0]["overlaped_element_INT_ID"].append(INT_ID)
 
-                    i+=1
+                    i += 1
 
-                # F2_start = temp_interaction.loc[:]['F2_start']
-                # F2_end = temp_interaction.loc[:]['F2_end']
-                # temp_interaction = self.interaction_data_seprated_chr_F2[chr - 1]
-                # start_index = np.searchsorted(F2_end, promoter_start - length)
-                # end_index = np.searchsorted(F2_start, promoter_end)
-                # i = start_index
-                #
-                # # indexes = temp_interaction.loc[:].index
-                # while i <= end_index:
-                #     # index = indexes[i]
-                #     F2_start = int(temp_interaction.at[i, 'F2_start'])
-                #     F2_end = int(temp_interaction.at[i, 'F2_end'])
-                #     if promoter_end < F2_start :
-                #         break
-                #     elif promoter_start > F2_start - 1990 and promoter_end < F2_end + 1990:
-                #         if F1_interaction[i] == 1:
-                #             F1_interaction[i] = 0
-                #         elif F1_interaction[i] == 0:
-                #             F1_interaction[i] = 2
-                #     i+=1
-                #
-                # F1_interactions = [i for i, n in enumerate(F1_interaction) if n == 1]
-                # F2_interactions = [i for i, n in enumerate(F1_interaction) if n == 2]
-                # temp_interaction = self.interaction_data_seprated_chr_F1[chr - 1]
-                # for i in F1_interactions:
-                #     start = int(temp_interaction.at[i, "F1_start"])
-                #     end = int(temp_interaction.at[i, "F1_end"])
-                #     INT_ID = temp_interaction.at[i, "INT_ID"]
-                #     id = temp_interaction.at[i, "F1_ID"]
-                #
-                #     if promoter_start < start:
-                #         bp_overlap = promoter_end - start
-                #     elif promoter_start >= start and promoter_end <= end:
-                #         bp_overlap = promoter_end - promoter_start
-                #     elif promoter_end > end:
-                #         bp_overlap = end - promoter_start
-                #
-                #     if promoter_id not in self.is_exist :
-                #         self.overlaps.append({"promoter_ID": promoter_id,
-                #                               "promoter_gene_name": promoter_gene_name,
-                #                               "promoter_gene_id": promoter_gene_id,
-                #                               "overlaped_element_F_ID": [id],
-                #                               "overlaped_element_start": [int(start)],
-                #                               "overlaped_element_end": [int(end)],
-                #                               "overlaped_element_INT_ID": [INT_ID],
-                #                               "number_of_overlap_bp": [bp_overlap]
-                #                               })
-                #         self.is_exist.add(promoter_id)
-                #
-                #     else:
-                #         exist_promoter = [sub_dict for sub_dict in self.overlaps if
-                #                           sub_dict["promoter_ID"] == promoter_id]
-                #
-                #         if id not in exist_promoter[0]["overlaped_element_F_ID"]:
-                #             exist_promoter[0]["overlaped_element_F_ID"].append(id)
-                #             exist_promoter[0]["overlaped_element_start"].append(start)
-                #             exist_promoter[0]["overlaped_element_end"].append(end)
-                #             exist_promoter[0]["number_of_overlap_bp"].append(bp_overlap)
-                #         exist_promoter[0]["overlaped_element_INT_ID"].append(INT_ID)
-                #
-                # for i in F2_interactions:
-                #     start = int(temp_interaction.at[i, "F2_start"])
-                #     end = int(temp_interaction.at[i, "F2_end"])
-                #     id = temp_interaction.at[i, "F2_ID"]
-                #     INT_ID = temp_interaction.at[i, "INT_ID"]
-                #
-                #     if promoter_start < start:
-                #         bp_overlap = promoter_end - start
-                #     elif promoter_start >= start and promoter_end <= end:
-                #         bp_overlap = promoter_end - promoter_start
-                #     elif promoter_end > end:
-                #         bp_overlap = end - promoter_start
+                    # F2_start = temp_interaction.loc[:]['F2_start']
+                    # F2_end = temp_interaction.loc[:]['F2_end']
+                    # temp_interaction = self.interaction_data_seprated_chr_F2[chr - 1]
+                    # start_index = np.searchsorted(F2_end, promoter_start - length)
+                    # end_index = np.searchsorted(F2_start, promoter_end)
+                    # i = start_index
+                    #
+                    # # indexes = temp_interaction.loc[:].index
+                    # while i <= end_index:
+                    #     # index = indexes[i]
+                    #     F2_start = int(temp_interaction.at[i, 'F2_start'])
+                    #     F2_end = int(temp_interaction.at[i, 'F2_end'])
+                    #     if promoter_end < F2_start :
+                    #         break
+                    #     elif promoter_start > F2_start - 1990 and promoter_end < F2_end + 1990:
+                    #         if F1_interaction[i] == 1:
+                    #             F1_interaction[i] = 0
+                    #         elif F1_interaction[i] == 0:
+                    #             F1_interaction[i] = 2
+                    #     i+=1
+                    #
+                    # F1_interactions = [i for i, n in enumerate(F1_interaction) if n == 1]
+                    # F2_interactions = [i for i, n in enumerate(F1_interaction) if n == 2]
+                    # temp_interaction = self.interaction_data_seprated_chr_F1[chr - 1]
+                    # for i in F1_interactions:
+                    #     start = int(temp_interaction.at[i, "F1_start"])
+                    #     end = int(temp_interaction.at[i, "F1_end"])
+                    #     INT_ID = temp_interaction.at[i, "INT_ID"]
+                    #     id = temp_interaction.at[i, "F1_ID"]
+                    #
+                    #     if promoter_start < start:
+                    #         bp_overlap = promoter_end - start
+                    #     elif promoter_start >= start and promoter_end <= end:
+                    #         bp_overlap = promoter_end - promoter_start
+                    #     elif promoter_end > end:
+                    #         bp_overlap = end - promoter_start
+                    #
+                    #     if promoter_id not in self.is_exist :
+                    #         self.overlaps.append({"promoter_ID": promoter_id,
+                    #                               "promoter_gene_name": promoter_gene_name,
+                    #                               "promoter_gene_id": promoter_gene_id,
+                    #                               "overlaped_element_F_ID": [id],
+                    #                               "overlaped_element_start": [int(start)],
+                    #                               "overlaped_element_end": [int(end)],
+                    #                               "overlaped_element_INT_ID": [INT_ID],
+                    #                               "number_of_overlap_bp": [bp_overlap]
+                    #                               })
+                    #         self.is_exist.add(promoter_id)
+                    #
+                    #     else:
+                    #         exist_promoter = [sub_dict for sub_dict in self.overlaps if
+                    #                           sub_dict["promoter_ID"] == promoter_id]
+                    #
+                    #         if id not in exist_promoter[0]["overlaped_element_F_ID"]:
+                    #             exist_promoter[0]["overlaped_element_F_ID"].append(id)
+                    #             exist_promoter[0]["overlaped_element_start"].append(start)
+                    #             exist_promoter[0]["overlaped_element_end"].append(end)
+                    #             exist_promoter[0]["number_of_overlap_bp"].append(bp_overlap)
+                    #         exist_promoter[0]["overlaped_element_INT_ID"].append(INT_ID)
+                    #
+                    # for i in F2_interactions:
+                    #     start = int(temp_interaction.at[i, "F2_start"])
+                    #     end = int(temp_interaction.at[i, "F2_end"])
+                    #     id = temp_interaction.at[i, "F2_ID"]
+                    #     INT_ID = temp_interaction.at[i, "INT_ID"]
+                    #
+                    #     if promoter_start < start:
+                    #         bp_overlap = promoter_end - start
+                    #     elif promoter_start >= start and promoter_end <= end:
+                    #         bp_overlap = promoter_end - promoter_start
+                    #     elif promoter_end > end:
+                    #         bp_overlap = end - promoter_start
 
                     # if promoter_id not in self.is_exist:
                     #     self.overlaps.append({"promoter_ID": promoter_id,
@@ -613,7 +660,7 @@ class Hic_proj():
         RNA_file_name = "miRNA_file.csv"
         RNA_data = pd.read_csv(RNA_file_name, header=None)
 
-        RNA_data.columns = ["index", "start", "end", "gene_name","seqname","gene_biotype"]
+        RNA_data.columns = ["index", "start", "end", "gene_name", "seqname", "gene_biotype"]
         RNA_data = RNA_data.loc[1:]
         RNA_data = RNA_data.astype({'start': 'int64'})
         RNA_data = RNA_data.astype({'end': 'int64'})
@@ -634,43 +681,14 @@ class Hic_proj():
         except IOError:
             print("I/O error / can not write on csv file")
 
-
-    def find_RNA_overlap(self, start, end, id, chr):
-        # print(id)
-
-        if chr == "X" or chr == "Y":
-            chr = 23
-        try:
-            chr = int(chr)
-        except:
-            chr = 24
-
-        if chr < 24 :
-            bin_data = self.bin_seprated[int(chr) - 1]
-
-            bin_start = bin_data.loc[:]["bin_start"]
-            bin_end = bin_data.loc[:]["bin_end"]
-            bin_id = bin_data.loc[:]["bin_id"]
-            index = np.searchsorted(bin_start, end)
-            length = end - start - 10
-
-            i = 1
-            while i < index:
-                if start > bin_start[i] - length and end < bin_end[i] + length:
-                    id_BIN = bin_id[i]
-                    self.interaction.append(
-                        {"bin_id": id_BIN, "RNA_id": id, "bin_start": bin_start[i], "bin_end": bin_end[i],
-                         "RNA_start": start, "RNA_end": end, "chr": chr})
-                i += 1
-
-
     def write_promoter_overlaps_to_csv(self):
 
-        csv_file = "promoter/new_overlap_promoter_version3.csv"
-        csv_columns = ['promoter_ID', 'promoter_gene_name','promoter_gene_id' ,'overlaped_element_F_ID', 'overlaped_element_start',
+        csv_file = "promoter/SEP45_overlap_promoter.csv"
+        csv_columns = ['promoter_ID', 'promoter_gene_name', 'promoter_gene_id', 'overlaped_element_F_ID',
+                       'overlaped_element_start',
                        'overlaped_element_end',
                        'overlaped_element_INT_ID',
-                       'number_of_overlap_bp','related_interactions_id']
+                       'number_of_overlap_bp', 'related_interactions_id']
         try:
             with open(csv_file, 'w', newline='') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
@@ -680,10 +698,9 @@ class Hic_proj():
         except IOError:
             print("I/O error / can not write on csv file")
 
-
     def check(self):
-        p1 = pd.read_csv("promoter/overlaps_vectorize2.csv",header=None)
-        p2 = pd.read_csv("final_promoter_overlap.csv",header=None)
+        p1 = pd.read_csv("promoter/overlaps_vectorize2.csv", header=None)
+        p2 = pd.read_csv("final_promoter_overlap.csv", header=None)
         # print(p1.loc[0][:])
         p1.columns = list(p1.loc[0][:])
         p2.columns = list(p2.loc[0][:])
@@ -694,18 +711,19 @@ class Hic_proj():
         print(m)
 
 
-
 gtf_file_name = "Homo_sapiens.GRCh37.87.gtf"
 # txt_file_name = "smal_interaction_data.txt"
-txt_file_name = "HMEC_SRR1658680_5k_0.01_5reads_2.05.19.txt"
-csv_file_name = "promoter/promoters_with_chr_v3.csv"
+txt_file_name = "SEP45/SEP45_CNON_HiC.csv"
+csv_file_name = "promoter/promoters_with_chr.csv"
 overlaps_csv_file_name = "promoter/final_promoter_overlaps_small_v1.csv"
 
 p = Hic_proj(gtf_file_name, txt_file_name, csv_file_name, overlaps_csv_file_name)
+# p.read_interaction_txt_file(mode=1)
+# p.make_bin_dictionary_interactions(txt_file_name)
 # p.find_probable_promoters()
 #
-p.read_gene_gtf_file()
-print("finish")
+# p.read_gene_gtf_file()
+# print("finish")
 # p.pre_process_intron_exons()
 # p.find_probable_promoters()
 # p.write_promoter_places_to_csv()
@@ -718,24 +736,25 @@ print("finish")
 
 # print(current_time2 - current_time)
 ###########################################
-# p.read_promter_csv_file()
-# print("step1 finished")
-# p.read_interaction_txt_file()
-# print("step2 finished")
-# # p.find_interaction_starts()
-# s = p.promoters_data.loc[:]["start"]
-# e = p.promoters_data.loc[:]["end"]
-# gn = p.promoters_data.loc[:]["gene_name"]
-# id = p.promoters_data.loc[:]["promoter_id"]
-# ch = p.promoters_data.loc[:]["chr"]
-# gn_id = p.promoters_data.loc[:]["gene_id"]
-# p.make_bin_dictionary_interactions()
-# vfunc = np.vectorize(p.find_overlap_with_promoter_vectorize)
-# vfunc(id, s, e, ch, gn,gn_id)
-#
-# print("step3 finished")
-# p.write_promoter_overlaps_to_csv()
-# print("all finished")
+
+p.read_promter_csv_file()
+print("step1 finished")
+p.read_interaction_txt_file("bin_data/SEP45_new_unique_bin.csv")
+print("step2 finished")
+# p.find_interaction_starts()
+s = p.promoters_data.loc[:]["start"]
+e = p.promoters_data.loc[:]["end"]
+gn = p.promoters_data.loc[:]["gene_name"]
+id = p.promoters_data.loc[:]["promoter_id"]
+ch = p.promoters_data.loc[:]["chr"]
+gn_id = p.promoters_data.loc[:]["gene_id"]
+p.make_bin_dictionary_interactions()
+vfunc = np.vectorize(p.find_overlap_with_promoter_vectorize)
+vfunc(id, s, e, ch, gn, gn_id)
+
+print("step3 finished")
+p.write_promoter_overlaps_to_csv()
+print("all finished")
 
 # p.check()
 # p.make_bin_dictionary_interactions()
